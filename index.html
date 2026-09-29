@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Budget Dashboard</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F5F5F5;
+            color: #334960;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Subtle background blobs to make the glass effect visible on #F5F5F5 */
+        .bg-blob {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: -1;
+            opacity: 0.15;
+        }
+        .bg-blob-1 {
+            width: 400px;
+            height: 400px;
+            background: #334960;
+            top: -100px;
+            left: -100px;
+        }
+        .bg-blob-2 {
+            width: 300px;
+            height: 300px;
+            background: #F97316; /* Orange */
+            bottom: 50px;
+            right: -50px;
+        }
+
+        /* Glassmorphism Classes */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+            border-radius: 20px;
+        }
+        
+        .glass-nav {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 255, 255, 0.9);
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.03);
+        }
+
+        .glass-input {
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            width: 100%;
+            transition: all 0.2s ease;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+        }
+        .glass-input:focus {
+            outline: none;
+            border-color: #334960;
+            box-shadow: 0 0 0 3px rgba(51, 73, 96, 0.1);
+        }
+
+        .glass-btn {
+            background: #334960;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(51, 73, 96, 0.3);
+        }
+        .glass-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 6px rgba(51, 73, 96, 0.3);
+        }
+
+        /* Segmented Control */
+        .segmented-control {
+            display: flex;
+            background: rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            border-radius: 12px;
+            padding: 4px;
+        }
+        .segmented-control input[type="radio"] {
+            display: none;
+        }
+        .segmented-control label {
+            flex: 1;
+            text-align: center;
+            padding: 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            color: #6B7280;
+        }
+        .segmented-control input[type="radio"]:checked + label {
+            background: #334960;
+            color: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        /* App Layout */
+        .app-container {
+            padding-bottom: 200px; 
+            min-height: 100vh;
+        }
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Custom Toast Modal */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .toast {
+            padding: 12px 24px;
+            border-radius: 30px;
+            background: rgba(51, 73, 96, 0.9);
+            color: white;
+            font-size: 14px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px);
+            animation: slideDown 0.3s ease forwards, fadeOut 0.3s ease 2.7s forwards;
+        }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 250px;
+            width: 100%;
+        }
+
+        .donut-center-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #334960;
+            pointer-events: none;
+            text-align: center;
+            line-height: 1.2;
+        }
+        .donut-center-text span {
+            display: block;
+            font-size: 0.75rem;
+            color: #9CA3AF;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-blob bg-blob-1"></div>
+    <div class="bg-blob bg-blob-2"></div>
+
+    <div id="toast-container"></div>
+
+    <!-- LOGIN OVERLAY -->
+    <div id="login-overlay" class="fixed inset-0 z-[100] flex items-center justify-center bg-[#F5F5F5]">
+        <div class="bg-blob bg-blob-1"></div>
+        <div class="bg-blob bg-blob-2"></div>
+        <div class="glass-panel p-8 w-full max-w-sm text-center relative z-10 mx-4">
+            <h1 class="text-2xl font-bold text-[#334960] mb-2">Budget Dashboard</h1>
+            <p class="text-sm text-gray-500 mb-8">Enter your 6-digit PIN to continue</p>
+            
+            <form id="login-form">
+                <input type="tel" id="pin-input" maxlength="6" placeholder="••••••" 
+                       class="glass-input w-full text-center text-3xl tracking-widest p-4 mb-4 font-mono" autocomplete="off">
+                <p id="pin-error" class="text-red-500 text-sm hidden mb-4"></p>
+                <button type="submit" class="glass-btn w-full py-3 text-lg" id="btn-login">Unlock</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN APP -->
+    <div id="main-app" class="app-container p-4 max-w-md mx-auto relative hidden">
+        
+        <!-- Header / Global Month Selector -->
+        <header class="glass-panel p-4 mb-6 flex justify-between items-center sticky top-4 z-40">
+            <h1 class="text-xl font-bold tracking-tight">Budget</h1>
+            <div>
+                <input type="month" id="global-month" class="glass-input !py-1 !px-2 text-sm font-semibold text-gray-700">
+            </div>
+        </header>
+
+        <!-- TAB 1: RECORD -->
+        <main id="tab-record" class="tab-content active">
+            <div class="glass-panel p-6 space-y-5">
+                <h2 class="text-lg font-bold">New Transaction</h2>
+                
+                <div class="segmented-control">
+                    <input type="radio" id="type-expense" name="trans-type" value="expense" checked onchange="updateCategories()">
+                    <label for="type-expense">Expense</label>
+                    <input type="radio" id="type-income" name="trans-type" value="income" onchange="updateCategories()">
+                    <label for="type-income">Income</label>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1 text-gray-600">Category</label>
+                    <select id="trans-category" class="glass-input appearance-none">
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1 text-gray-600">Amount</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-3 text-gray-500 font-medium">$</span>
+                        <input type="number" id="trans-amount" step="0.01" class="glass-input pl-8" placeholder="0.00" required>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1 text-gray-600">Date</label>
+                    <input type="date" id="trans-date" class="glass-input" required>
+                </div>
+
+                <button onclick="saveTransaction()" class="glass-btn w-full mt-2" id="btn-save-trans">
+                    <i class="fa-solid fa-check mr-2"></i> Save Transaction
+                </button>
+            </div>
+        </main>
+
+        <!-- TAB 2: INPUTS -->
+        <main id="tab-inputs" class="tab-content">
+            <div class="glass-panel p-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold">Transactions</h2>
+                    <span id="trans-count" class="text-sm text-gray-500">0 items</span>
+                </div>
+                
+                <div id="transactions-list" class="space-y-3 max-h-[65vh] overflow-y-auto pr-1">
+                    <!-- Transactions populated by JS -->
+                    <div class="text-center text-gray-400 py-10">Loading data...</div>
+                </div>
+            </div>
+        </main>
+
+        <!-- TAB 3: DASHBOARD -->
+        <main id="tab-dashboard" class="tab-content">
+            <div class="space-y-6">
+                <!-- Summary Card -->
+                <div class="glass-panel p-5 text-center">
+                    <p class="text-sm text-gray-500 font-medium mb-1">Net Cash Flow</p>
+                    <h3 id="dash-net" class="text-3xl font-bold">$0.00</h3>
+                    <div class="flex justify-between mt-4 text-sm">
+                        <div>
+                            <p class="text-gray-500">In</p>
+                            <p id="dash-in" class="font-bold text-green-600">$0.00</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-500">Out</p>
+                            <p id="dash-out" class="font-bold text-orange-500">$0.00</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Donut 1: Actual vs Planned Expenses -->
+                <div class="glass-panel p-4">
+                    <h3 class="text-md font-bold mb-2 text-center text-[#334960]">Actual / Planned Expenses</h3>
+                    <div class="chart-container">
+                        <canvas id="chart-donut-exp-plan"></canvas>
+                        <div id="text-donut-exp-plan" class="donut-center-text">0%<span>of Plan</span></div>
+                    </div>
+                </div>
+
+                <!-- Donut 2: Actual Expenses vs Actual Income -->
+                <div class="glass-panel p-4">
+                    <h3 class="text-md font-bold mb-2 text-center text-[#334960]">Expenses / Income</h3>
+                    <div class="chart-container">
+                        <canvas id="chart-donut-exp-inc"></canvas>
+                        <div id="text-donut-exp-inc" class="donut-center-text">0%<span>of Income</span></div>
+                    </div>
+                </div>
+
+                <!-- Chart 3: Expense Breakdown -->
+                <div class="glass-panel p-4">
+                    <h3 class="text-md font-bold mb-2 text-center text-[#334960]">Expense Breakdown</h3>
+                    <div class="chart-container"><canvas id="chart-exp-breakdown"></canvas></div>
+                </div>
+
+                <!-- Chart 4: Actual vs Planned Expenses (Bar) -->
+                <div class="glass-panel p-4">
+                    <h3 class="text-md font-bold mb-2 text-center text-[#334960]">Expenses: Actual vs Planned</h3>
+                    <div class="chart-container"><canvas id="chart-bar-exp"></canvas></div>
+                </div>
+
+                <!-- Total Expenses vs Planned (Bar) -->
+                <div class="glass-panel p-4">
+                    <h3 class="text-md font-bold mb-2 text-center text-[#334960]">Total Expenses vs Planned</h3>
+                    <div class="chart-container"><canvas id="chart-total-exp"></canvas></div>
+                </div>
+
+                <!-- Total Income vs Planned (Bar) -->
+                <div class="glass-panel p-4">
+                    <h3 class="text-md font-bold mb-2 text-center text-[#334960]">Total Income vs Planned</h3>
+                    <div class="chart-container"><canvas id="chart-total-inc"></canvas></div>
+                </div>
+                
+                <!-- Data Tables -->
+                <div class="glass-panel p-4 overflow-hidden">
+                    <h3 class="text-md font-bold mb-3 text-[#334960]">Category Details</h3>
+                    <div id="dashboard-tables" class="space-y-6 text-sm">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+                
+                <!-- Dedicated Invisible Spacer Block -->
+                <div style="height: 100px; width: 100%; pointer-events: none;" aria-hidden="true"></div>
+            </div>
+        </main>
+
+        <!-- TAB 4: PLAN -->
+        <main id="tab-plan" class="tab-content">
+            <div class="glass-panel p-5">
+                <div class="mb-4">
+                    <h2 class="text-lg font-bold">Monthly Plan</h2>
+                    <p class="text-sm text-gray-500">Set target amounts for each category.</p>
+                </div>
+                
+                <div id="plan-list" class="space-y-4 max-h-[55vh] overflow-y-auto pr-2 pb-4">
+                    <!-- Populated by JS -->
+                </div>
+                
+                <button onclick="savePlan()" class="glass-btn w-full mt-4" id="btn-save-plan">
+                    <i class="fa-solid fa-floppy-disk mr-2"></i> Save Plan
+                </button>
+            </div>
+        </main>
+
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav id="bottom-nav" class="glass-nav fixed bottom-0 w-full max-w-md left-1/2 transform -translate-x-1/2 z-50 rounded-t-3xl pb-safe hidden">
+        <ul class="flex justify-around items-center p-2">
+            <li class="w-1/4">
+                <button onclick="switchTab('record')" id="nav-record" class="w-full flex flex-col items-center p-2 text-[#334960] transition">
+                    <i class="fa-solid fa-plus text-xl mb-1"></i>
+                    <span class="text-[10px] font-medium">Record</span>
+                </button>
+            </li>
+            <li class="w-1/4">
+                <button onclick="switchTab('inputs')" id="nav-inputs" class="w-full flex flex-col items-center p-2 text-gray-400 transition">
+                    <i class="fa-solid fa-list-ul text-xl mb-1"></i>
+                    <span class="text-[10px] font-medium">Inputs</span>
+                </button>
+            </li>
+            <li class="w-1/4">
+                <button onclick="switchTab('dashboard')" id="nav-dashboard" class="w-full flex flex-col items-center p-2 text-gray-400 transition">
+                    <i class="fa-solid fa-chart-pie text-xl mb-1"></i>
+                    <span class="text-[10px] font-medium">Dashboard</span>
+                </button>
+            </li>
+            <li class="w-1/4">
+                <button onclick="switchTab('plan')" id="nav-plan" class="w-full flex flex-col items-center p-2 text-gray-400 transition">
+                    <i class="fa-solid fa-bullseye text-xl mb-1"></i>
+                    <span class="text-[10px] font-medium">Plan</span>
+                </button>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- Edit Transaction Modal -->
+    <div id="edit-modal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm px-4">
+        <div class="glass-panel p-6 space-y-5 w-full max-w-sm relative bg-white bg-opacity-90">
+            <button onclick="closeEditModal()" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+            <h2 class="text-lg font-bold text-[#334960]">Edit Transaction</h2>
+            
+            <div class="segmented-control">
+                <input type="radio" id="edit-type-expense" name="edit-trans-type" value="expense" onchange="updateEditCategories()">
+                <label for="edit-type-expense">Expense</label>
+                <input type="radio" id="edit-type-income" name="edit-trans-type" value="income" onchange="updateEditCategories()">
+                <label for="edit-type-income">Income</label>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium mb-1 text-gray-600">Category</label>
+                <select id="edit-category" class="glass-input appearance-none"></select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium mb-1 text-gray-600">Amount</label>
+                <div class="relative">
+                    <span class="absolute left-3 top-3 text-gray-500 font-medium">$</span>
+                    <input type="number" id="edit-amount" step="0.01" class="glass-input pl-8" placeholder="0.00" required>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium mb-1 text-gray-600">Date</label>
+                <input type="date" id="edit-date" class="glass-input" required>
+            </div>
+
+            <button onclick="updateTransaction()" class="glass-btn w-full mt-2" id="btn-update-trans">
+                <i class="fa-solid fa-check mr-2"></i> Update Transaction
+            </button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        // Replaced Anonymous Auth with Email/Password Auth
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, deleteDoc, updateDoc, onSnapshot, collection, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Environment Variables Handling
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'budget-tracker-app';
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyCodzluaYsA8wns2Tem10N9IW84TdUrmsI",
+            authDomain: "budgeting-5d944.firebaseapp.com",
+            projectId: "budgeting-5d944",
+            storageBucket: "budgeting-5d944.firebasestorage.app",
+            messagingSenderId: "632116256425",
+            appId: "1:632116256425:web:e45cd13be5cf0cf4a053b8"
+        };
+
+        // --- App State ---
+        const state = {
+            transactions: [],
+            plans: {}, 
+            userId: null,
+            db: null,
+            charts: {} 
+        };
+
+        const EXPENSES = ["Rent", "Emergency Saving", "Investing", "Tithing & Fast Offerings", "1 Month of Maya's Tuition", "Groceries", "Gas", "Fun Money", "Other"];
+        const INCOME = ["Ethan's Income", "Maya's Income", "Other Income"];
+
+        // Color Palette
+        const COLORS = {
+            blue: '#334960',
+            orange: '#F97316',
+            gray: '#9CA3AF',
+            lightBlue: '#607d8b',
+            lightOrange: '#fb923c',
+            slate: '#475569',
+            green: '#22c55e',
+            red: '#ef4444'
+        };
+
+        const PALETTE = [COLORS.blue, COLORS.orange, COLORS.gray, COLORS.lightBlue, COLORS.lightOrange, COLORS.slate];
+
+        // UI Helpers
+        window.showToast = (message) => {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerText = message;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        };
+
+        window.formatCurrency = (num) => {
+            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num || 0);
+        };
+
+        // Initialize App
+        function init() {
+            // Set default dates
+            const today = new Date();
+            document.getElementById('trans-date').value = today.toISOString().split('T')[0];
+            
+            const monthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+            document.getElementById('global-month').value = monthStr;
+            
+            window.updateCategories();
+
+            try {
+                const app = initializeApp(firebaseConfig);
+                state.db = getFirestore(app);
+                const auth = getAuth(app);
+
+                // Authentication Observer for persistent login
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        state.userId = user.uid;
+                        document.getElementById('login-overlay').classList.add('hidden');
+                        document.getElementById('main-app').classList.remove('hidden');
+                        document.getElementById('bottom-nav').classList.remove('hidden');
+                        startDataSync();
+                    } else {
+                        document.getElementById('login-overlay').classList.remove('hidden');
+                        document.getElementById('main-app').classList.add('hidden');
+                        document.getElementById('bottom-nav').classList.add('hidden');
+                    }
+                });
+
+                // PIN Login Form Handler
+                document.getElementById('login-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const pinInput = document.getElementById('pin-input');
+                    const pinError = document.getElementById('pin-error');
+                    const btnLogin = document.getElementById('btn-login');
+                    const pin = pinInput.value.trim();
+                    
+                    if (pin.length !== 6) {
+                        pinError.textContent = "PIN must be exactly 6 digits.";
+                        pinError.classList.remove('hidden');
+                        return;
+                    }
+
+                    btnLogin.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Unlocking...`;
+                    btnLogin.disabled = true;
+
+                    signInWithEmailAndPassword(auth, "household@budget.app", pin)
+                        .catch((error) => {
+                            pinError.textContent = "Incorrect PIN. Please try again.";
+                            pinError.classList.remove('hidden');
+                            pinInput.value = '';
+                            btnLogin.innerHTML = "Unlock";
+                            btnLogin.disabled = false;
+                        });
+                });
+
+            } catch (err) {
+                console.error("Firebase init error:", err);
+                showToast("Failed to connect to database.");
+            }
+
+            // Event listener for month change
+            document.getElementById('global-month').addEventListener('change', () => {
+                renderApp();
+            });
+        }
+
+        function startDataSync() {
+            if (!state.userId || !state.db) return;
+
+            // 1. Sync Transactions
+            const txRef = collection(state.db, 'artifacts', appId, 'users', state.userId, 'transactions');
+            onSnapshot(txRef, (snapshot) => {
+                state.transactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                // Sort descending by date
+                state.transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+                renderApp();
+            }, (error) => console.error("TX Sync Error:", error));
+
+            // 2. Sync Plans
+            const planRef = collection(state.db, 'artifacts', appId, 'users', state.userId, 'plans');
+            onSnapshot(planRef, (snapshot) => {
+                state.plans = {};
+                snapshot.docs.forEach(doc => {
+                    // Document ID is the month string (e.g., "2026-09")
+                    state.plans[doc.id] = doc.data(); 
+                });
+                renderApp();
+            }, (error) => console.error("Plan Sync Error:", error));
+        }
+
+        window.switchTab = (tabId) => {
+            // Update content
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+
+            // Update Nav colors
+            document.querySelectorAll('nav button').forEach(btn => {
+                btn.classList.remove('text-[#334960]');
+                btn.classList.add('text-gray-400');
+            });
+            const activeBtn = document.getElementById(`nav-${tabId}`);
+            activeBtn.classList.remove('text-gray-400');
+            activeBtn.classList.add('text-[#334960]');
+
+            // Trigger re-render for charts if dashboard is active
+            if (tabId === 'dashboard' || tabId === 'inputs' || tabId === 'plan') {
+                renderApp();
+            }
+        };
+
+        window.updateCategories = () => {
+            const isExpense = document.getElementById('type-expense').checked;
+            const select = document.getElementById('trans-category');
+            select.innerHTML = '';
+            
+            const cats = isExpense ? EXPENSES : INCOME;
+            cats.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c;
+                opt.innerText = c;
+                select.appendChild(opt);
+            });
+        };
+
+        window.updateEditCategories = () => {
+            const isExpense = document.getElementById('edit-type-expense').checked;
+            const select = document.getElementById('edit-category');
+            select.innerHTML = '';
+            
+            const cats = isExpense ? EXPENSES : INCOME;
+            cats.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c;
+                opt.innerText = c;
+                select.appendChild(opt);
+            });
+        };
+
+        let editingTxId = null;
+
+        window.openEditModal = (id) => {
+            const tx = state.transactions.find(t => t.id === id);
+            if(!tx) return;
+            editingTxId = id;
+            
+            document.getElementById(tx.type === 'expense' ? 'edit-type-expense' : 'edit-type-income').checked = true;
+            window.updateEditCategories();
+            document.getElementById('edit-category').value = tx.category;
+            document.getElementById('edit-amount').value = tx.amount;
+            document.getElementById('edit-date').value = tx.date;
+            
+            document.getElementById('edit-modal').classList.remove('hidden');
+            document.getElementById('edit-modal').classList.add('flex');
+        };
+
+        window.closeEditModal = () => {
+            editingTxId = null;
+            document.getElementById('edit-modal').classList.add('hidden');
+            document.getElementById('edit-modal').classList.remove('flex');
+        };
+
+        window.updateTransaction = async () => {
+            if (!state.userId || !editingTxId) return;
+            
+            const btn = document.getElementById('btn-update-trans');
+            const type = document.getElementById('edit-type-expense').checked ? 'expense' : 'income';
+            const category = document.getElementById('edit-category').value;
+            const amount = parseFloat(document.getElementById('edit-amount').value);
+            const date = document.getElementById('edit-date').value;
+
+            if (isNaN(amount) || amount <= 0 || !date) {
+                return showToast("Please enter a valid amount and date.");
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Updating...`;
+
+            try {
+                const docRef = doc(state.db, 'artifacts', appId, 'users', state.userId, 'transactions', editingTxId);
+                await updateDoc(docRef, { type, category, amount, date });
+                showToast("Transaction updated!");
+                window.closeEditModal();
+            } catch (err) {
+                console.error(err);
+                showToast("Error updating transaction");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-check mr-2"></i> Update Transaction`;
+            }
+        };
+
+        window.saveTransaction = async () => {
+            if (!state.userId) return showToast("Not connected to database");
+            
+            const btn = document.getElementById('btn-save-trans');
+            const type = document.getElementById('type-expense').checked ? 'expense' : 'income';
+            const category = document.getElementById('trans-category').value;
+            const amount = parseFloat(document.getElementById('trans-amount').value);
+            const date = document.getElementById('trans-date').value;
+
+            if (isNaN(amount) || amount <= 0 || !date) {
+                return showToast("Please enter a valid amount and date.");
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Saving...`;
+
+            try {
+                const colRef = collection(state.db, 'artifacts', appId, 'users', state.userId, 'transactions');
+                await addDoc(colRef, { type, category, amount, date, timestamp: Date.now() });
+                
+                showToast("Transaction saved!");
+                document.getElementById('trans-amount').value = '';
+                window.switchTab('inputs');
+            } catch (err) {
+                console.error(err);
+                showToast("Error saving transaction");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-check mr-2"></i> Save Transaction`;
+            }
+        };
+
+        window.deleteTransaction = async (id) => {
+            if (!state.userId) return;
+            try {
+                const docRef = doc(state.db, 'artifacts', appId, 'users', state.userId, 'transactions', id);
+                await deleteDoc(docRef);
+                showToast("Deleted");
+            } catch (e) {
+                showToast("Error deleting");
+            }
+        }
+
+        window.savePlan = async () => {
+            if (!state.userId) return showToast("Not connected");
+            const monthStr = document.getElementById('global-month').value;
+            
+            const planData = {};
+            [...EXPENSES, ...INCOME].forEach(cat => {
+                const idSafe = cat.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+                const val = parseFloat(document.getElementById(`plan-${idSafe}`).value) || 0;
+                planData[cat] = val;
+            });
+
+            const btn = document.getElementById('btn-save-plan');
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Saving...`;
+
+            try {
+                const docRef = doc(state.db, 'artifacts', appId, 'users', state.userId, 'plans', monthStr);
+                await setDoc(docRef, planData);
+                showToast("Plan saved for " + monthStr);
+            } catch (e) {
+                showToast("Error saving plan");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-floppy-disk mr-2"></i> Save Plan`;
+            }
+        }
+
+        function renderApp() {
+            const currentMonth = document.getElementById('global-month').value; 
+            
+            const monthTx = state.transactions.filter(t => t.date.startsWith(currentMonth));
+            const monthPlan = state.plans[currentMonth] || {};
+
+            renderInputs(monthTx);
+            renderPlanForm(monthPlan);
+            
+            if (document.getElementById('tab-dashboard').classList.contains('active')) {
+                renderDashboard(monthTx, monthPlan);
+            }
+        }
+
+        function renderInputs(txList) {
+            const container = document.getElementById('transactions-list');
+            document.getElementById('trans-count').innerText = `${txList.length} items`;
+            
+            if (txList.length === 0) {
+                container.innerHTML = `<div class="text-center text-gray-400 py-10">No transactions for this month.</div>`;
+                return;
+            }
+
+            container.innerHTML = txList.map(t => {
+                const isExp = t.type === 'expense';
+                const sign = isExp ? '-' : '+';
+                const color = isExp ? 'text-[#334960]' : 'text-orange-500'; 
+                
+                return `
+                <div class="glass-panel p-3 flex justify-between items-center group">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center ${isExp ? 'bg-[#334960] text-white' : 'bg-orange-100 text-orange-500'} bg-opacity-20">
+                            <i class="fa-solid ${isExp ? 'fa-arrow-up-right-dots' : 'fa-arrow-down'}"></i>
+                        </div>
+                        <div>
+                            <p class="font-bold text-sm text-[#334960]">${t.category}</p>
+                            <p class="text-xs text-gray-500">${t.date}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <p class="font-bold ${color} mr-2">${sign}${formatCurrency(t.amount)}</p>
+                        <div class="flex flex-col gap-1 transition">
+                            <button onclick="openEditModal('${t.id}')" class="text-blue-400 hover:text-blue-600 p-1"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button onclick="deleteTransaction('${t.id}')" class="text-red-400 hover:text-red-600 p-1"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        function renderPlanForm(planData) {
+            const container = document.getElementById('plan-list');
+            
+            let effectivePlan = { ...planData };
+            
+            if (Object.keys(effectivePlan).length === 0) {
+                const currentMonth = document.getElementById('global-month').value;
+                const sortedMonths = Object.keys(state.plans).sort().reverse();
+                const prevMonth = sortedMonths.find(m => m < currentMonth);
+                if (prevMonth) {
+                    effectivePlan = { ...state.plans[prevMonth] };
+                }
+            }
+            
+            let html = `<h3 class="font-bold text-[#334960] mt-2 mb-3 border-b border-gray-200 pb-1">Expenses</h3>`;
+            
+            EXPENSES.forEach(cat => {
+                const idSafe = cat.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+                const val = effectivePlan[cat] !== undefined ? effectivePlan[cat] : '';
+                html += `
+                    <div class="flex justify-between items-center bg-white bg-opacity-20 p-2 rounded-lg mb-2">
+                        <label class="text-sm font-medium text-gray-700 truncate flex-1">${cat}</label>
+                        <div class="w-1/3 relative">
+                            <span class="absolute left-2 top-1.5 text-gray-500 text-sm">$</span>
+                            <input type="number" id="plan-${idSafe}" value="${val}" class="glass-input !py-1 pl-6 text-sm" placeholder="0">
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `<h3 class="font-bold text-[#334960] mt-6 mb-3 border-b border-gray-200 pb-1">Income</h3>`;
+            
+            INCOME.forEach(cat => {
+                const idSafe = cat.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+                const val = effectivePlan[cat] !== undefined ? effectivePlan[cat] : '';
+                html += `
+                    <div class="flex justify-between items-center bg-white bg-opacity-20 p-2 rounded-lg mb-2">
+                        <label class="text-sm font-medium text-gray-700 truncate flex-1">${cat}</label>
+                        <div class="w-1/3 relative">
+                            <span class="absolute left-2 top-1.5 text-gray-500 text-sm">$</span>
+                            <input type="number" id="plan-${idSafe}" value="${val}" class="glass-input !py-1 pl-6 text-sm" placeholder="0">
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function renderDashboard(txList, planData) {
+            let totalActualIn = 0, totalActualOut = 0;
+            let totalPlanIn = 0, totalPlanOut = 0;
+            const expByCategory = {};
+            const incByCategory = {};
+            
+            EXPENSES.forEach(c => {
+                expByCategory[c] = 0;
+                totalPlanOut += (planData[c] || 0);
+            });
+            INCOME.forEach(c => {
+                incByCategory[c] = 0;
+                totalPlanIn += (planData[c] || 0);
+            });
+
+            txList.forEach(t => {
+                if (t.type === 'expense') {
+                    totalActualOut += t.amount;
+                    if (expByCategory[t.category] !== undefined) expByCategory[t.category] += t.amount;
+                } else {
+                    totalActualIn += t.amount;
+                    if (incByCategory[t.category] !== undefined) incByCategory[t.category] += t.amount;
+                }
+            });
+
+            const net = totalActualIn - totalActualOut;
+
+            document.getElementById('dash-in').innerText = formatCurrency(totalActualIn);
+            document.getElementById('dash-out').innerText = formatCurrency(totalActualOut);
+            const netEl = document.getElementById('dash-net');
+            netEl.innerText = formatCurrency(net);
+            netEl.className = `text-3xl font-bold ${net >= 0 ? 'text-green-600' : 'text-orange-500'}`;
+
+            const resetChart = (id) => {
+                if (state.charts[id]) state.charts[id].destroy();
+            }
+
+            Chart.defaults.color = COLORS.slate;
+            Chart.defaults.font.family = "'Inter', sans-serif";
+
+            const pieTooltipCallback = {
+                label: function(context) {
+                    let label = context.label || '';
+                    if (label) label += ': ';
+                    let val = context.raw || 0;
+                    let total = context.dataset.data.reduce((a, b) => a + b, 0);
+                    let pct = total > 0 ? Math.round((val / total) * 100) : 0;
+                    return label + formatCurrency(val) + ' (' + pct + '%)';
+                }
+            };
+
+            const barTooltipCallback = {
+                label: function(context) {
+                    let datasetLabel = context.dataset.label || '';
+                    let val = context.raw || 0;
+                    let planned = context.chart.data.datasets[0].data[context.dataIndex] || 0;
+                    let pctText = '';
+                    if (datasetLabel === 'Actual') {
+                        let pct = planned > 0 ? Math.round((val / planned) * 100) : (val > 0 ? 100 : 0);
+                        pctText = ' (' + pct + '% of Plan)';
+                    } else if (datasetLabel === 'Planned') {
+                        pctText = ' (100%)';
+                    }
+                    return datasetLabel + ': ' + formatCurrency(val) + pctText;
+                }
+            };
+            
+            // 1. Donut: Actual Expenses vs Planned Expenses
+            resetChart('chart-donut-exp-plan');
+            const expPlanPct = totalPlanOut > 0 ? Math.round((totalActualOut / totalPlanOut) * 100) : 0;
+            document.getElementById('text-donut-exp-plan').innerHTML = `${expPlanPct}%<span>of Plan</span>`;
+            const remainingExpPlan = Math.max(0, totalPlanOut - totalActualOut);
+            
+            const ctx1 = document.getElementById('chart-donut-exp-plan').getContext('2d');
+            state.charts['chart-donut-exp-plan'] = new Chart(ctx1, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Actual Expenses', 'Remaining Plan'],
+                    datasets: [{
+                        data: [totalActualOut, remainingExpPlan],
+                        backgroundColor: [COLORS.orange, COLORS.gray],
+                        borderWidth: 0
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { display: false }, tooltip: { callbacks: pieTooltipCallback } } }
+            });
+
+            // 2. Donut: Actual Expenses vs Actual Income
+            resetChart('chart-donut-exp-inc');
+            const expIncPct = totalActualIn > 0 ? Math.round((totalActualOut / totalActualIn) * 100) : 0;
+            document.getElementById('text-donut-exp-inc').innerHTML = `${expIncPct}%<span>of Income</span>`;
+            const remainingInc = Math.max(0, totalActualIn - totalActualOut);
+            
+            const ctx2 = document.getElementById('chart-donut-exp-inc').getContext('2d');
+            state.charts['chart-donut-exp-inc'] = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Expenses', 'Remaining Income'],
+                    datasets: [{
+                        data: [totalActualOut, remainingInc],
+                        backgroundColor: [COLORS.orange, COLORS.blue],
+                        borderWidth: 0
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { display: false }, tooltip: { callbacks: pieTooltipCallback } } }
+            });
+
+            // 3. Pie: Expense Breakdown
+            resetChart('chart-exp-breakdown');
+            const expLabels = EXPENSES.filter(c => expByCategory[c] > 0);
+            const expData = expLabels.map(c => expByCategory[c]);
+            const ctx3 = document.getElementById('chart-exp-breakdown').getContext('2d');
+            state.charts['chart-exp-breakdown'] = new Chart(ctx3, {
+                type: 'pie',
+                data: {
+                    labels: expLabels.length ? expLabels : ['No Data'],
+                    datasets: [{
+                        data: expLabels.length ? expData : [1],
+                        backgroundColor: expLabels.length ? PALETTE : [COLORS.gray],
+                        borderWidth: 1, borderColor: '#fff'
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins:{ legend: {position: 'right'}, tooltip: { callbacks: pieTooltipCallback } } }
+            });
+
+            // 4. Bar: Actual vs Planned Expenses
+            resetChart('chart-bar-exp');
+            const plannedExps = EXPENSES.map(c => planData[c] || 0);
+            const actualExps = EXPENSES.map(c => expByCategory[c]);
+            const ctx4 = document.getElementById('chart-bar-exp').getContext('2d');
+            state.charts['chart-bar-exp'] = new Chart(ctx4, {
+                type: 'bar',
+                data: {
+                    labels: EXPENSES.map(c => c.length > 8 ? c.substring(0,8)+'..' : c),
+                    datasets: [
+                        { label: 'Planned', data: plannedExps, backgroundColor: COLORS.gray, borderRadius: 2 },
+                        { label: 'Actual', data: actualExps, backgroundColor: COLORS.orange, borderRadius: 2 }
+                    ]
+                },
+                options: { 
+                    responsive: true, maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } },
+                    plugins: { tooltip: { callbacks: barTooltipCallback } }
+                }
+            });
+
+            // 5. Bar: Total Expenses vs Planned
+            resetChart('chart-total-exp');
+            const ctxTotalExp = document.getElementById('chart-total-exp').getContext('2d');
+            state.charts['chart-total-exp'] = new Chart(ctxTotalExp, {
+                type: 'bar',
+                data: {
+                    labels: ['Total Expenses'],
+                    datasets: [
+                        { label: 'Planned', data: [totalPlanOut], backgroundColor: COLORS.gray, borderRadius: 2 },
+                        { label: 'Actual', data: [totalActualOut], backgroundColor: COLORS.orange, borderRadius: 2 }
+                    ]
+                },
+                options: { 
+                    responsive: true, maintainAspectRatio: false,
+                    scales: { y: { display: false }, x: { display: false } },
+                    plugins: { legend: { position: 'top' }, tooltip: { callbacks: barTooltipCallback } }
+                }
+            });
+
+            // 6. Bar: Total Income vs Planned
+            resetChart('chart-total-inc');
+            const ctxTotalInc = document.getElementById('chart-total-inc').getContext('2d');
+            state.charts['chart-total-inc'] = new Chart(ctxTotalInc, {
+                type: 'bar',
+                data: {
+                    labels: ['Total Income'],
+                    datasets: [
+                        { label: 'Planned', data: [totalPlanIn], backgroundColor: COLORS.gray, borderRadius: 2 },
+                        { label: 'Actual', data: [totalActualIn], backgroundColor: COLORS.blue, borderRadius: 2 }
+                    ]
+                },
+                options: { 
+                    responsive: true, maintainAspectRatio: false,
+                    scales: { y: { display: false }, x: { display: false } },
+                    plugins: { legend: { position: 'top' }, tooltip: { callbacks: barTooltipCallback } }
+                }
+            });
+            
+            // Render Data Tables
+            const tableContainer = document.getElementById('dashboard-tables');
+            let tableHTML = '';
+
+            const buildTable = (title, categories, planMap, actualMap) => {
+                let html = `
+                <div>
+                    <h4 class="font-bold text-gray-700 border-b pb-1 mb-2">${title}</h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="text-xs text-gray-500 border-b">
+                                    <th class="py-1 font-medium">Category</th>
+                                    <th class="py-1 font-medium text-right">Plan</th>
+                                    <th class="py-1 font-medium text-right">Actual</th>
+                                    <th class="py-1 font-medium text-right">Diff</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                categories.forEach(cat => {
+                    const plan = planMap[cat] || 0;
+                    const actual = actualMap[cat] || 0;
+                    const diff = actual - plan;
+                    const diffColor = diff > 0 ? (title === 'Income' ? 'text-green-600' : 'text-orange-500') : (diff < 0 ? (title === 'Income' ? 'text-orange-500' : 'text-green-600') : 'text-gray-500');
+                    const diffSign = diff > 0 ? '+' : '';
+
+                    html += `
+                        <tr class="border-b border-gray-100 last:border-0 text-gray-700">
+                            <td class="py-2 text-xs truncate max-w-[100px]">${cat}</td>
+                            <td class="py-2 text-xs text-right">${formatCurrency(plan)}</td>
+                            <td class="py-2 text-xs text-right font-medium">${formatCurrency(actual)}</td>
+                            <td class="py-2 text-xs text-right ${diffColor}">${diffSign}${formatCurrency(diff)}</td>
+                        </tr>
+                    `;
+                });
+                html += `</tbody></table></div></div>`;
+                return html;
+            };
+
+            tableHTML += buildTable('Expenses', EXPENSES, planData, expByCategory);
+            tableHTML += buildTable('Income', INCOME, planData, incByCategory);
+
+            tableContainer.innerHTML = tableHTML;
+        }
+
+        // Boot
+        window.addEventListener('DOMContentLoaded', init);
+
+    </script>
+</body>
+</html>
