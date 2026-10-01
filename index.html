@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Budget Dashboard</title>
+    <title>Budgeting</title>
 
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon.png">
@@ -247,6 +247,12 @@
                     <label for="type-income">Income</label>
                 </div>
 
+                <!-- NAME FIELD -->
+                <div>
+                    <label class="block text-sm font-medium mb-1 text-gray-600">Name</label>
+                    <input type="text" id="trans-name" class="glass-input" placeholder="Defaults to Category">
+                </div>
+
                 <div>
                     <label class="block text-sm font-medium mb-1 text-gray-600">Category</label>
                     <select id="trans-category" class="glass-input appearance-none">
@@ -425,6 +431,12 @@
                 <label for="edit-type-expense">Expense</label>
                 <input type="radio" id="edit-type-income" name="edit-trans-type" value="income" onchange="updateEditCategories()">
                 <label for="edit-type-income">Income</label>
+            </div>
+
+            <!-- NAME FIELD -->
+            <div>
+                <label class="block text-sm font-medium mb-1 text-gray-600">Name</label>
+                <input type="text" id="edit-name" class="glass-input" placeholder="Defaults to Category">
             </div>
 
             <div>
@@ -659,6 +671,7 @@
             
             document.getElementById(tx.type === 'expense' ? 'edit-type-expense' : 'edit-type-income').checked = true;
             window.updateEditCategories();
+            document.getElementById('edit-name').value = tx.name || tx.category;
             document.getElementById('edit-category').value = tx.category;
             document.getElementById('edit-amount').value = tx.amount;
             document.getElementById('edit-date').value = tx.date;
@@ -679,6 +692,7 @@
             const btn = document.getElementById('btn-update-trans');
             const type = document.getElementById('edit-type-expense').checked ? 'expense' : 'income';
             const category = document.getElementById('edit-category').value;
+            const name = document.getElementById('edit-name').value.trim() || category;
             const amount = parseFloat(document.getElementById('edit-amount').value);
             const date = document.getElementById('edit-date').value;
 
@@ -691,7 +705,7 @@
 
             try {
                 const docRef = doc(state.db, 'artifacts', appId, 'users', state.userId, 'transactions', editingTxId);
-                await updateDoc(docRef, { type, category, amount, date });
+                await updateDoc(docRef, { type, name, category, amount, date });
                 showToast("Transaction updated!");
                 window.closeEditModal();
             } catch (err) {
@@ -709,6 +723,7 @@
             const btn = document.getElementById('btn-save-trans');
             const type = document.getElementById('type-expense').checked ? 'expense' : 'income';
             const category = document.getElementById('trans-category').value;
+            const name = document.getElementById('trans-name').value.trim() || category;
             const amount = parseFloat(document.getElementById('trans-amount').value);
             const date = document.getElementById('trans-date').value;
 
@@ -721,9 +736,10 @@
 
             try {
                 const colRef = collection(state.db, 'artifacts', appId, 'users', state.userId, 'transactions');
-                await addDoc(colRef, { type, category, amount, date, timestamp: Date.now() });
+                await addDoc(colRef, { type, name, category, amount, date, timestamp: Date.now() });
                 
                 showToast("Transaction saved!");
+                document.getElementById('trans-name').value = '';
                 document.getElementById('trans-amount').value = '';
                 window.switchTab('inputs');
             } catch (err) {
@@ -800,6 +816,7 @@
                 const isExp = t.type === 'expense';
                 const sign = isExp ? '-' : '+';
                 const color = isExp ? 'text-[#334960]' : 'text-orange-500'; 
+                const displayName = t.name || t.category;
                 
                 return `
                 <div class="glass-panel p-3 flex justify-between items-center group">
@@ -808,8 +825,8 @@
                             <i class="fa-solid ${isExp ? 'fa-arrow-up-right-dots' : 'fa-arrow-down'}"></i>
                         </div>
                         <div>
-                            <p class="font-bold text-sm text-[#334960]">${t.category}</p>
-                            <p class="text-xs text-gray-500">${t.date}</p>
+                            <p class="font-bold text-sm text-[#334960]">${displayName}</p>
+                            <p class="text-xs text-gray-500">${t.category} • ${t.date}</p>
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
