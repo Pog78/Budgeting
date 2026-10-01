@@ -28,15 +28,6 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* Smart Scroll Locking for iOS */
-        body.no-scroll {
-            overflow: hidden;
-        }
-
-        /* Hide scrollbars for clean UI inside scrolling panels */
-        .hide-scroll::-webkit-scrollbar { display: none; }
-        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
-
         /* Subtle background blobs */
         .bg-blob {
             position: fixed;
@@ -84,8 +75,7 @@
             border-radius: 12px;
             padding: 0.75rem 1rem;
             width: 100%;
-            max-width: 100%; /* Fixes iOS input breaking container */
-            box-sizing: border-box; /* Forces padding to stay inside border */
+            box-sizing: border-box;
             transition: all 0.2s ease;
             box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
         }
@@ -140,6 +130,7 @@
         /* App Layout */
         .app-container {
             min-height: 100dvh;
+            padding-bottom: 120px;
         }
         .tab-content {
             display: none;
@@ -210,7 +201,7 @@
         }
     </style>
 </head>
-<body class="no-scroll">
+<body>
 
     <div class="bg-blob bg-blob-1"></div>
     <div class="bg-blob bg-blob-2"></div>
@@ -247,73 +238,72 @@
 
         <!-- TAB 1: RECORD -->
         <main id="tab-record" class="tab-content active">
-            <!-- Max height prevents body scroll, hide-scroll hides inner bar -->
-            <div class="glass-panel p-6 max-h-[calc(100dvh-130px)] overflow-y-auto hide-scroll flex flex-col">
-                <div class="space-y-5">
-                    <h2 class="text-lg font-bold">New Transaction</h2>
-                    
-                    <div class="segmented-control">
-                        <input type="radio" id="type-expense" name="trans-type" value="expense" checked onchange="updateCategories()">
-                        <label for="type-expense">Expense</label>
-                        <input type="radio" id="type-income" name="trans-type" value="income" onchange="updateCategories()">
-                        <label for="type-income">Income</label>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium mb-1 text-gray-600">Name</label>
-                        <input type="text" id="trans-name" class="glass-input" placeholder="Defaults to Category">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium mb-1 text-gray-600">Category</label>
-                        <select id="trans-category" class="glass-input appearance-none">
-                            <!-- Populated by JS -->
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium mb-1 text-gray-600">Amount</label>
-                        <div class="relative">
-                            <span class="absolute left-3 top-3 text-gray-500 font-medium">$</span>
-                            <input type="number" id="trans-amount" step="0.01" class="glass-input pl-8" placeholder="0.00" required>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium mb-1 text-gray-600">Date</label>
-                        <input type="date" id="trans-date" class="glass-input" required>
-                    </div>
-
-                    <button onclick="saveTransaction()" class="glass-btn w-full mt-2" id="btn-save-trans">
-                        <i class="fa-solid fa-check mr-2"></i> Save Transaction
-                    </button>
+            <div class="glass-panel p-6 space-y-5">
+                <h2 class="text-lg font-bold">New Transaction</h2>
+                
+                <div class="segmented-control">
+                    <input type="radio" id="type-expense" name="trans-type" value="expense" checked onchange="updateCategories()">
+                    <label for="type-expense">Expense</label>
+                    <input type="radio" id="type-income" name="trans-type" value="income" onchange="updateCategories()">
+                    <label for="type-income">Income</label>
                 </div>
-                <!-- Spacing block inside scroll container -->
-                <div style="height: 100px; width: 100%; flex-shrink-0 pointer-events: none;" aria-hidden="true"></div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1 text-gray-600">Name</label>
+                    <input type="text" id="trans-name" class="glass-input" placeholder="Defaults to Category">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1 text-gray-600">Category</label>
+                    <select id="trans-category" class="glass-input appearance-none">
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1 text-gray-600">Amount</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-3 text-gray-500 font-medium">$</span>
+                        <input type="number" id="trans-amount" step="0.01" class="glass-input pl-8" placeholder="0.00" required>
+                    </div>
+                </div>
+
+                <!-- 95% Width Centered Date Fix -->
+                <div>
+                    <label class="block text-sm font-medium mb-1 text-gray-600">Date</label>
+                    <input type="date" id="trans-date" class="glass-input !w-[95%] mx-auto block" required>
+                </div>
+
+                <button onclick="saveTransaction()" class="glass-btn w-full mt-2" id="btn-save-trans">
+                    <i class="fa-solid fa-check mr-2"></i> Save Transaction
+                </button>
             </div>
+            
+            <!-- Bottom Spacer for Body Scrolling -->
+            <div style="height: 120px; width: 100%; pointer-events: none;" aria-hidden="true"></div>
         </main>
 
         <!-- TAB 2: INPUTS -->
         <main id="tab-inputs" class="tab-content">
-            <div class="glass-panel p-4 max-h-[calc(100dvh-130px)] overflow-y-auto hide-scroll flex flex-col">
-                <div class="flex justify-between items-center mb-4 flex-shrink-0">
+            <div class="glass-panel p-4">
+                <div class="flex justify-between items-center mb-4">
                     <h2 class="text-lg font-bold">Transactions</h2>
                     <span id="trans-count" class="text-sm text-gray-500">0 items</span>
                 </div>
                 
-                <div id="transactions-list" class="space-y-3 flex-1 pr-1">
+                <div id="transactions-list" class="space-y-3 pr-1">
                     <!-- Transactions populated by JS -->
                     <div class="text-center text-gray-400 py-10">Loading data...</div>
                 </div>
-
-                <!-- Spacing block inside scroll container -->
-                <div style="height: 100px; width: 100%; flex-shrink-0 pointer-events: none;" aria-hidden="true"></div>
             </div>
+            
+            <!-- Bottom Spacer for Body Scrolling -->
+            <div style="height: 120px; width: 100%; pointer-events: none;" aria-hidden="true"></div>
         </main>
 
         <!-- TAB 3: DASHBOARD -->
         <main id="tab-dashboard" class="tab-content">
-            <div class="space-y-6 pb-24">
+            <div class="space-y-6">
                 <!-- Summary Card -->
                 <div class="glass-panel p-5 text-center">
                     <p class="text-sm text-gray-500 font-medium mb-1">Net Cash Flow</p>
@@ -379,31 +369,31 @@
                         <!-- Populated by JS -->
                     </div>
                 </div>
-                
-                <!-- Dashboard scrolls main body so spacer works here -->
-                <div style="height: 100px; width: 100%; pointer-events: none;" aria-hidden="true"></div>
             </div>
+            
+            <!-- Bottom Spacer for Body Scrolling -->
+            <div style="height: 120px; width: 100%; pointer-events: none;" aria-hidden="true"></div>
         </main>
 
         <!-- TAB 4: PLAN -->
         <main id="tab-plan" class="tab-content">
-            <div class="glass-panel p-5 max-h-[calc(100dvh-130px)] overflow-y-auto hide-scroll flex flex-col">
-                <div class="mb-4 flex-shrink-0">
+            <div class="glass-panel p-5">
+                <div class="mb-4">
                     <h2 class="text-lg font-bold">Monthly Plan</h2>
                     <p class="text-sm text-gray-500">Set target amounts for each category.</p>
                 </div>
                 
-                <div id="plan-list" class="space-y-4 pr-2 flex-1">
+                <div id="plan-list" class="space-y-4 pr-2">
                     <!-- Populated by JS -->
                 </div>
                 
-                <button onclick="savePlan()" class="glass-btn w-full mt-4 flex-shrink-0" id="btn-save-plan">
+                <button onclick="savePlan()" class="glass-btn w-full mt-4" id="btn-save-plan">
                     <i class="fa-solid fa-floppy-disk mr-2"></i> Save Plan
                 </button>
-
-                <!-- Spacing block inside scroll container -->
-                <div style="height: 100px; width: 100%; flex-shrink-0 pointer-events: none;" aria-hidden="true"></div>
             </div>
+            
+            <!-- Bottom Spacer for Body Scrolling -->
+            <div style="height: 120px; width: 100%; pointer-events: none;" aria-hidden="true"></div>
         </main>
 
     </div>
@@ -471,9 +461,10 @@
                 </div>
             </div>
 
+            <!-- 95% Width Centered Date Fix -->
             <div>
                 <label class="block text-sm font-medium mb-1 text-gray-600">Date</label>
-                <input type="date" id="edit-date" class="glass-input" required>
+                <input type="date" id="edit-date" class="glass-input !w-[95%] mx-auto block" required>
             </div>
 
             <button onclick="updateTransaction()" class="glass-btn w-full mt-2" id="btn-update-trans">
@@ -628,13 +619,6 @@
         }
 
         window.switchTab = (tabId) => {
-            // Manage Body Scrolling lock
-            if (tabId === 'dashboard') {
-                document.body.classList.remove('no-scroll');
-            } else {
-                document.body.classList.add('no-scroll');
-            }
-
             // Update content
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.getElementById(`tab-${tabId}`).classList.add('active');
