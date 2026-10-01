@@ -268,7 +268,6 @@
                     </div>
                 </div>
 
-                <!-- 95% Width Centered Date Fix, later changed to 70% -->
                 <div>
                     <label class="block text-sm font-medium mb-1 text-gray-600">Date</label>
                     <input type="date" id="trans-date" class="glass-input !w-[70%] mx-auto block" required>
@@ -279,7 +278,6 @@
                 </button>
             </div>
             
-            <!-- Bottom Spacer for Body Scrolling -->
             <div style="height: 120px; width: 100%; pointer-events: none;" aria-hidden="true"></div>
         </main>
 
@@ -292,12 +290,10 @@
                 </div>
                 
                 <div id="transactions-list" class="space-y-3 pr-1">
-                    <!-- Transactions populated by JS -->
                     <div class="text-center text-gray-400 py-10">Loading data...</div>
                 </div>
             </div>
             
-            <!-- Bottom Spacer for Body Scrolling -->
             <div style="height: 120px; width: 100%; pointer-events: none;" aria-hidden="true"></div>
         </main>
 
@@ -366,12 +362,10 @@
                 <div class="glass-panel p-4 overflow-hidden">
                     <h3 class="text-md font-bold mb-3 text-[#334960]">Category Details</h3>
                     <div id="dashboard-tables" class="space-y-6 text-sm">
-                        <!-- Populated by JS -->
                     </div>
                 </div>
             </div>
             
-            <!-- Bottom Spacer for Body Scrolling -->
             <div style="height: 120px; width: 100%; pointer-events: none;" aria-hidden="true"></div>
         </main>
 
@@ -392,7 +386,6 @@
                 </button>
             </div>
             
-            <!-- Bottom Spacer for Body Scrolling -->
             <div style="height: 120px; width: 100%; pointer-events: none;" aria-hidden="true"></div>
         </main>
 
@@ -461,7 +454,6 @@
                 </div>
             </div>
 
-            <!-- 95% Width Centered Date Fix, later changed to 70% -->
             <div>
                 <label class="block text-sm font-medium mb-1 text-gray-600">Date</label>
                 <input type="date" id="edit-date" class="glass-input !w-[70%] mx-auto block" required>
@@ -478,7 +470,6 @@
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, deleteDoc, updateDoc, onSnapshot, collection, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Environment Variables Handling
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'budget-tracker-app';
         
         const firebaseConfig = {
@@ -490,7 +481,6 @@
             appId: "1:632116256425:web:e45cd13be5cf0cf4a053b8"
         };
 
-        // --- App State ---
         const state = {
             transactions: [],
             plans: {}, 
@@ -502,7 +492,6 @@
         const EXPENSES = ["Rent", "Emergency Saving", "Investing", "Tithing & Fast Offerings", "1 Month of Maya's Tuition", "Groceries", "Gas", "Fun Money", "Other"];
         const INCOME = ["Ethan's Income", "Maya's Income", "Other Income"];
 
-        // Color Palette
         const COLORS = {
             blue: '#334960',
             orange: '#F97316',
@@ -516,7 +505,6 @@
 
         const PALETTE = [COLORS.blue, COLORS.orange, COLORS.gray, COLORS.lightBlue, COLORS.lightOrange, COLORS.slate];
 
-        // UI Helpers
         window.showToast = (message) => {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -530,9 +518,7 @@
             return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num || 0);
         };
 
-        // Initialize App
         function init() {
-            // Local Time Zone Fix
             const today = new Date();
             const year = today.getFullYear();
             const month = String(today.getMonth() + 1).padStart(2, '0');
@@ -619,11 +605,9 @@
         }
 
         window.switchTab = (tabId) => {
-            // Update content
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.getElementById(`tab-${tabId}`).classList.add('active');
 
-            // Update Nav colors
             document.querySelectorAll('nav button').forEach(btn => {
                 btn.classList.remove('text-[#334960]');
                 btn.classList.add('text-gray-400');
@@ -791,6 +775,27 @@
                 btn.innerHTML = `<i class="fa-solid fa-floppy-disk mr-2"></i> Save Plan`;
             }
         }
+        
+        window.calculatePlanTotals = () => {
+            let totalExp = 0;
+            EXPENSES.forEach(cat => {
+                const idSafe = cat.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+                totalExp += parseFloat(document.getElementById(`plan-${idSafe}`).value) || 0;
+            });
+            document.getElementById('plan-total-expenses').innerText = formatCurrency(totalExp);
+
+            let totalInc = 0;
+            INCOME.forEach(cat => {
+                const idSafe = cat.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+                totalInc += parseFloat(document.getElementById(`plan-${idSafe}`).value) || 0;
+            });
+            document.getElementById('plan-total-income').innerText = formatCurrency(totalInc);
+            
+            let netPlan = totalInc - totalExp;
+            let netEl = document.getElementById('plan-net-planned');
+            netEl.innerText = formatCurrency(netPlan);
+            netEl.className = `font-bold text-sm tracking-wide ${netPlan >= 0 ? 'text-green-600' : 'text-orange-500'}`;
+        };
 
         function renderApp() {
             const currentMonth = document.getElementById('global-month').value; 
@@ -860,35 +865,68 @@
             
             let html = `<h3 class="font-bold text-[#334960] mt-2 mb-3 border-b border-gray-200 pb-1">Expenses</h3>`;
             
+            let initialTotalExp = 0;
             EXPENSES.forEach(cat => {
                 const idSafe = cat.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
                 const val = effectivePlan[cat] !== undefined ? effectivePlan[cat] : '';
+                initialTotalExp += parseFloat(val) || 0;
+                
                 html += `
                     <div class="flex justify-between items-center bg-white bg-opacity-20 p-2 rounded-lg mb-2">
                         <label class="text-sm font-medium text-gray-700 truncate flex-1 pr-2">${cat}</label>
                         <div class="w-1/3 relative flex-shrink-0">
                             <span class="absolute left-2 top-1.5 text-gray-500 text-sm">$</span>
-                            <input type="number" id="plan-${idSafe}" value="${val}" class="glass-input !py-1 pl-6 text-sm" placeholder="0">
+                            <input type="number" id="plan-${idSafe}" value="${val}" oninput="calculatePlanTotals()" class="glass-input !py-1 pl-6 text-sm" placeholder="0">
                         </div>
                     </div>
                 `;
             });
+            
+            // Render Total Expenses Line
+            html += `
+                <div class="flex justify-between items-center text-[#334960] p-2 mb-6">
+                    <label class="text-sm font-bold truncate flex-1 pr-2">Total Expenses</label>
+                    <div class="font-bold text-sm tracking-wide" id="plan-total-expenses">${formatCurrency(initialTotalExp)}</div>
+                </div>
+            `;
 
             html += `<h3 class="font-bold text-[#334960] mt-6 mb-3 border-b border-gray-200 pb-1">Income</h3>`;
             
+            let initialTotalInc = 0;
             INCOME.forEach(cat => {
                 const idSafe = cat.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
                 const val = effectivePlan[cat] !== undefined ? effectivePlan[cat] : '';
+                initialTotalInc += parseFloat(val) || 0;
+                
                 html += `
                     <div class="flex justify-between items-center bg-white bg-opacity-20 p-2 rounded-lg mb-2">
                         <label class="text-sm font-medium text-gray-700 truncate flex-1 pr-2">${cat}</label>
                         <div class="w-1/3 relative flex-shrink-0">
                             <span class="absolute left-2 top-1.5 text-gray-500 text-sm">$</span>
-                            <input type="number" id="plan-${idSafe}" value="${val}" class="glass-input !py-1 pl-6 text-sm" placeholder="0">
+                            <input type="number" id="plan-${idSafe}" value="${val}" oninput="calculatePlanTotals()" class="glass-input !py-1 pl-6 text-sm" placeholder="0">
                         </div>
                     </div>
                 `;
             });
+            
+            // Render Total Income Line
+            html += `
+                <div class="flex justify-between items-center text-[#334960] p-2 mb-2">
+                    <label class="text-sm font-bold truncate flex-1 pr-2">Total Income</label>
+                    <div class="font-bold text-sm tracking-wide" id="plan-total-income">${formatCurrency(initialTotalInc)}</div>
+                </div>
+            `;
+            
+            // Render Net Planned Line
+            let initialNetPlan = initialTotalInc - initialTotalExp;
+            let netColorClass = initialNetPlan >= 0 ? 'text-green-600' : 'text-orange-500';
+            
+            html += `
+                <div class="flex justify-between items-center text-[#334960] p-2 mb-2 border-t border-gray-200 mt-2 pt-4">
+                    <label class="text-sm font-bold truncate flex-1 pr-2">Net Planned</label>
+                    <div class="font-bold text-sm tracking-wide ${netColorClass}" id="plan-net-planned">${formatCurrency(initialNetPlan)}</div>
+                </div>
+            `;
 
             container.innerHTML = html;
         }
@@ -1123,7 +1161,6 @@
             tableContainer.innerHTML = tableHTML;
         }
 
-        // Boot
         window.addEventListener('DOMContentLoaded', init);
 
     </script>
